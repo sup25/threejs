@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Parcel Sandbox</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div id="canvas_parent">
+      <div id="canvas_threejs"></div>
+    </div>
+
+    <script
+      async
+      src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"
+    ></script>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.130.0/build/three.module.js",
+          "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.130.0/examples/jsm/controls/OrbitControls.js",
+          "three/examples/jsm/loaders/GLTFLoader": "https://unpkg.com/three@0.130.0/examples/jsm/loaders/GLTFLoader.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+      import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+
+      let isMobile = window.innerWidth < 768;
+      //===================================================== canvas
+      let widthCus = document.getElementById("canvas_parent").clientWidth;
+      let heightCus = document.getElementById("canvas_parent").clientHeight;
+      var renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(widthCus / heightCus);
+      renderer.setSize(widthCus, heightCus);
+      renderer.autoClear = false;
+
+      let clock = new THREE.Clock();
+
+      const canvas = document
+        .getElementById("canvas_threejs")
+        .appendChild(renderer.domElement);
+
+      let renderRequested = false;
+
+      //===================================================== scene
+      var scene = new THREE.Scene();
+
+      //===================================================== camera
+      const fov = 75;
+      const aspect = widthCus / heightCus; // the canvas default
+      const near = 0.1;
+      const far = 100;
+      const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+      camera.position.set(0, 0, -2);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 0, 0);
+      controls.update();
+      controls.enablePan = false;
+      controls.enableDamping = true;
+
+      const color = 0xffffff;
+      const intensity = 1;
+      const light = new THREE.DirectionalLight(color, intensity);
+      light.position.set(0, 10, -2);
+      scene.add(light);
+
+      // Instantiate a loader
+      const loader = new GLTFLoader();
+      let model;
+      let mixer; // Declare the mixer variable
+
+      loader.load(
+        "https://res.cloudinary.com/dqvk8jjox/image/upload/v1687327384/dae_bazaar_steampunk_carnival_game_oucc7c.glb",
+        (gltf) => {
+          model = gltf.scene;
+          model.position.set(0, -0.95, 0);
+          model.traverse(function (object) {
+            if (object.isMesh) object.castShadow = true;
+          });
+
+          mixer = new THREE.AnimationMixer(model); // Initialize the mixer
+          const animations = gltf.animations;
+          const animation = animations[0]; // Choose the desired animation
+
+          const action = mixer.clipAction(animation);
+          action.play();
+
+          scene.add(model);
+          renderer.render(scene, camera);
+        }
+      );
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const mixerUpdateDelta = clock.getDelta();
+        controls.update();
+        renderer.render(scene, camera);
+        if (mixer) {
+          mixer.update(mixerUpdateDelta); // Update the animation mixer if it exists
+        }
+      }
+
+      animate();
+
+      window.addEventListener("resize", () => {
+        let widthCus = document.getElementById("canvas_parent").clientWidth;
+        let heightCus = document.getElementById("canvas_parent").clientHeight;
+
+        renderer.setSize(widthCus, heightCus);
+        camera.aspect = widthCus / heightCus;
+        camera.updateProjectionMatrix();
+      });
+    </script>
+  </body>
+</html>
